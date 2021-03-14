@@ -2,6 +2,9 @@
 #include <ctype.h>
 #include <iostream>
 
+// This warning is disable to allow the use of the fopen() function.
+// For some reason, the compiler didnt like this and this solution 
+// allowed it to work with my code.
 #pragma warning(disable : 4996)
 
 using namespace std;
@@ -14,13 +17,15 @@ int token;
 int nextToken;
 FILE* in_fp, * fopen();
 
-
 #define LETTER 0
 #define DIGIT 1
 #define UNKNOWN 99
 #define INT_LIT 10
 #define IDENT 11
 
+/*
+Forward Declaration of functions
+*/
 void tokenize();
 int lookup(char ch);
 void addChar();
@@ -32,7 +37,11 @@ void term();
 void factor();
 void form();
 
-
+/* 
+Driver Function to make initial call to get the next character, 
+and draw a lex followed by evaluating the next token in the expr() 
+funtion.
+*/
 void tokenize() {
 	getChar();
 	do {
@@ -41,6 +50,10 @@ void tokenize() {
 	} while (nextToken != EOF);
 }
 
+/*
+A refactored version of the textbook's lookup method. Switch 
+statement are a bit slow so I changed it to a loop structure.
+*/
 int lookup(char ch) {
 	char matcher[] = { '=', '+', '-', '*', '/', '(', ')', '%', '!' };
 	for (int i = 0; i < sizeof(matcher); i++) {
@@ -53,62 +66,80 @@ int lookup(char ch) {
 	return nextToken;
 }
 
+/*
+Adds the nextChar character to the end of the current working 
+lexeme.
+*/
 void addChar() {
-	if (lexLen <= 98) {
-		lexeme[lexLen++] = nextChar;
-		lexeme[lexLen] = 0;
-	}
-	else {
+	// Acting as a Guard Clause
+	if (lexLen > 98) {
 		printf("Error - lexeme is too long \n");
+		return;
 	}
+
+	lexeme[lexLen++] = nextChar;
+	lexeme[lexLen] = 0;
 }
 
+/*
+Checks the nextChar character to see if it is a number or letter.
+If neither, set to UNKNOWN.
+*/
 void getChar() {
-	if ((nextChar = getc(in_fp)) != EOF) {
-		if (isalpha(nextChar))
-			charClass = LETTER;
-		else if (isdigit(nextChar))
-			charClass = DIGIT;
-		else charClass = UNKNOWN;
-	}
-	else
+	if ((nextChar = getc(in_fp)) == EOF) {
 		charClass = EOF;
+		return;
+	}
+	if (isalpha(nextChar)){
+		charClass = LETTER;
+		return;
+	}
+	if (isdigit(nextChar)) {
+		charClass = DIGIT;
+		return;
+	}
+	charClass = UNKNOWN;
 }
 
+/*
+Sets nextChar to the next, non white space, character.
+*/
 void getNonBlank() {
 	while (isspace(nextChar))
 		getChar();
 }
 
+// Helper function for lex()
+void addGetPair() {
+	addChar();
+	getChar();
+}
+
+/*
+The Lexical Analyzer for simple arithmetic equations
+*/
 int lex() {
 	lexLen = 0;
 	getNonBlank();
 	switch (charClass) {
 	case LETTER:
-		addChar();
-		getChar();
+		addGetPair();
 		while (charClass == LETTER || charClass == DIGIT) {
-			addChar();
-			getChar();
+			addGetPair();
 		}
 		nextToken = IDENT;
 		break;
-		/* Parse integer literals */
 	case DIGIT:
-		addChar();
-		getChar();
+		addGetPair();
 		while (charClass == DIGIT) {
-			addChar();
-			getChar();
+			addGetPair();
 		}
 		nextToken = INT_LIT;
 		break;
-		/* Parentheses and operators */
 	case UNKNOWN:
 		lookup(nextChar);
 		getChar();
 		break;
-		/* EOF */
 	case EOF:
 		nextToken = EOF;
 		lexeme[0] = 'E';
@@ -122,7 +153,9 @@ int lex() {
 	return nextToken;
 }
 
-
+/*
+Sub-Program for <expr>
+*/
 void expr() {
 	printf("\nEnter <expr>");
 	term();
@@ -133,36 +166,36 @@ void expr() {
 	printf("\nExit <expr>");
 }
 
+/*
+Sub-Program for <term>
+*/
 void term() {
-
 	printf("\nEnter <term>");
-
 	factor();
-
 	while (nextToken == 23 || nextToken == 24 || nextToken == 27) {
 		lex();
 		factor();
 	}
 	printf("\nExit <term>");
-	
 }
 
+/*
+Sub-Program for <factor>
+*/
 void factor() {
 	printf("\nEnter <factor>");
-
 	form();
-
 	if (nextToken == 28) {
 		lex();
 	}
-
 	printf("\nExit <factor>");;
 }
 
-
+/*
+Sub-Program for <form>
+*/
 void form() {
 	printf("\nEnter <form>");
-
 	if (nextToken == IDENT || nextToken == INT_LIT)
 		lex();
 	else {
@@ -183,8 +216,6 @@ void form() {
 	}
 	printf("\nExit <form>");;
 }
-
-
 
 int main() {
 	in_fp = fopen("input.txt", "r");
